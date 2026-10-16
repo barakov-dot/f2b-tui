@@ -70,6 +70,14 @@ print('TERMINAL_OK', flush=True)
     def test_real_text_submit(self):
         self.run_terminal("assert ui.prompt('Address') == '2001:db8::1'", b'2001:db8::1\n', 'Address')
 
+    def test_real_banned_ip_list_renders_geo_and_cancels(self):
+        body = ("ui.load_bans = lambda: ([dict(jail='sshd', ip='203.0.113.7', start=None, end=None, permanent=True, cc='DE', net='AS64500 Example Hosting · 203.0.113.0/24', haystack='x')], []); "
+                "ui.s.timeout(100); assert ui.bans_screen() is None")
+        self.run_terminal(body, b'\x1b', 'Example Hosting', 'en')
+
+    def test_real_nerd_font_mode_menu(self):
+        self.run_terminal("ui.mode = 'nerd'; assert ui.menu('menu', f2b_ui.ACTIONS, True, True) is None", b'q', 'Control panel')
+
 
 if __name__ == '__main__':
     unittest.main()

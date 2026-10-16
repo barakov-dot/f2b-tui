@@ -1,4 +1,4 @@
-# Fail2ban TUI 0.2
+# Fail2ban TUI 0.3
 
 English · [Русский](README.md)
 
@@ -7,18 +7,62 @@ Python 3.10+, with no web server or third-party Python dependencies.
 
 ## Features
 
-- Service status, jail details, banned IPs and the last 250 log lines.
-- Single-address IPv4/IPv6 ban/unban with explicit confirmation.
+- Dashboard on the main screen: service state, bans per jail, latest Ban/Unban events.
+- **Banned-IP list**: pick an IP with the arrow keys, press Enter to unban. Shows country, network/provider (AS), subnet and time left; refreshes itself.
+- Multi-select (Space), search (`/`), sorting (`s`), networks with many IPs (`g`), IP details (`i`).
+- Unban in one jail, in all jails, or unban **and whitelist** (`ignoreip`).
+- Offline geography: country + AS/network name from DB-IP Lite, updated from the program. Optional online lookup of city/network for one IP.
+- Live log (`tail -f` style) with Ban/Unban/Found highlighting.
+- Single-address IPv4/IPv6 ban with explicit confirmation; loopback and **your own SSH address are refused**.
 - Timing/retry changes, configuration validation, reload and restart.
 - Full configuration backups, restoration and automatic rollback of failed edits.
-- Unicode icons, ASCII decoration fallback (`A`), colorless terminals, RU/EN switch (`L`).
+- Icons: Unicode, **Nerd Font** or ASCII (`A` cycles), flags on/off (`F`), colorless terminals, RU/EN switch (`L`).
 - Scrolling menus, resize handling and **ESC cancellation in every input**, including partial IPs.
 
-Minimum terminal: 48×12; recommended: 90×24. Icons need no Nerd Font.
+Minimum terminal: 48×12; recommended: 100×26. Unicode mode needs no Nerd Font; use `sudo f2b --nerd` or `A` for Nerd Font glyphs.
 Preferences are saved per server in `/var/lib/f2b-tui/preferences.json`.
 ASCII changes decorations; Russian text still requires UTF-8.
 Use `sudo f2b --lang en --ascii` for limited terminal fonts.
 Fail2ban/systemd diagnostics retain their original language.
+
+## Banned IPs, geography and networks
+
+Menu → **Banned IPs · unban**:
+
+```text
+  Banned IPs · unban
+      CC IP address        Jail            Left     Network / provider
+    ○ RU 77.88.8.8         nginx-http-auth  1m 24s  AS13238 YANDEX LLC · 77.88.8.0/22  🇷🇺
+  > ○ FI 95.216.1.9        sshd             4m 54s  AS24940 Hetzner Online GmbH · 95.216.0.0/15  🇫🇮
+    ○ DE 2a00:1450:4001::1 sshd             1d 23h  AS15169 Google LLC · 2a00:1450::/32  🇩🇪
+```
+
+| Key | Action |
+|---|---|
+| ↑↓ / j k / PgUp PgDn / Home End | move |
+| **Enter** | unban the marked (or selected) IPs → choose `y` this jail, `a` all jails, `w` unban + whitelist |
+| Space / `*` | mark / mark all visible |
+| `/` | search by IP, jail, country, network |
+| `s` | sort: time, country, network, jail, IP |
+| `i` / `o` | details (offline) / refine city and network online |
+| `g` | networks with several banned IPs (spot targeted attacks) |
+| `b` | ban an IP manually (refuses loopback and your SSH address) |
+| `r`, `?` | refresh now (auto every 5 s), help |
+
+`w` writes `ignoreip` for that jail to `99-f2b-tui.local` using the same transactional
+path as other edits (backup → write → validate → reload → verify → rollback). It freezes
+that jail's ignore list at its current effective value plus the new IP.
+
+**Geography.** Menu → *Geo database* → *Update database* downloads
+[DB-IP Lite](https://db-ip.com/db/lite.php) country and ASN CSVs (≈12 MB, HTTPS) and builds
+`/var/lib/f2b-tui/geo.sqlite` (≈50 MB) atomically; a failed or cancelled (ESC) download keeps
+the previous database. Also: `sudo f2b geo-update`, `sudo f2b geo-lookup 8.8.8.8 [--online]`.
+Lookups are local; no address leaves the server. Cities are not in the offline base (the
+DB-IP city file is ~90 MB compressed). Pressing `o` or looking up an IP in the Geo menu can
+ask **ipwho.is** and **rdap.org** for city and network name, but only after your explicit
+confirmation; results are cached for 30 days (`geo-cache.json`, clearable from the menu).
+Flag emoji are shown at the end of each row because terminals disagree about their width;
+`F` hides them. Data: © DB-IP.com, CC BY 4.0.
 
 ## Install / upgrade from 0.1
 
@@ -31,7 +75,7 @@ sudo apt-get install -y python3 fail2ban git
 src=$(mktemp -d)
 git clone --depth 1 https://github.com/barakov-dot/f2b-tui.git "$src"
 git -C "$src" rev-parse HEAD
-# Review install.sh, f2b.py, f2b_core.py and f2b_ui.py in "$src".
+# Review install.sh, f2b.py, f2b_core.py, f2b_geo.py, f2b_bans.py and f2b_ui.py in "$src".
 sudo bash "$src/install.sh"
 sudo f2b --lang en
 ```

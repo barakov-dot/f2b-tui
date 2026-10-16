@@ -7,6 +7,7 @@ import sys
 import tempfile
 from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import f2b_bans as bans
 import f2b_core as core
 
 
@@ -38,6 +39,20 @@ def main():
                     core.checked('fail2ban-client', 'set', 'f2b-test', 'banip', ip)
                     assert ip in core.checked('fail2ban-client', 'get', 'f2b-test', 'banip')
                     core.checked('fail2ban-client', 'set', 'f2b-test', 'unbanip', ip)
+                # Banned-IP listing, as the TUI parses it from the live server.
+                for ip in ('192.0.2.77', '2001:db8::77'):
+                    core.checked('fail2ban-client', 'set', 'f2b-test', 'banip', ip)
+                listed = {b['ip']: b for b in bans.jail_bans('f2b-test')}
+                assert set(listed) == {'192.0.2.77', '2001:db8::77'}, listed
+                assert all(b['end'] and 0 < bans.remaining(b) <= 30 for b in listed.values()), listed
+                assert 'f2b-test' in bans.jails()
+                done, failures = bans.unban([('f2b-test', '192.0.2.77'), ('f2b-test', '2001:db8::77')])
+                assert len(done) == 2 and not failures, (done, failures)
+                assert bans.jail_bans('f2b-test') == []
+                # Persistent whitelist keeps the inherited ignore list and survives reload.
+                inherited = core.ignored('f2b-test')
+                core.add_ignoreip('f2b-test', '192.0.2.200')
+                assert set(core.ignored('f2b-test')) >= set(inherited) | {'192.0.2.200'}
                 core.write_setting('f2b-test', 'bantime', '600')
                 assert core.checked('fail2ban-client', 'get', 'f2b-test', 'bantime') == '600'
                 assert (config / 'jail.local').read_bytes() == customer

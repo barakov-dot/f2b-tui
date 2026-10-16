@@ -98,6 +98,49 @@ class CoreTests(unittest.TestCase):
             core.write_setting('sshd', 'maxretry', '2')
         self.assertEqual(outside.read_text(), 'unchanged')
 
+    IGNORE_OUTPUT = 'These IP addresses/networks are ignored:\n|- 127.0.0.0/8\n|- ::1\n|- office.example.com\n`- 198.51.100.0/24'
+
+    def test_ignored_parses_fail2ban_tree_and_keeps_hostnames(self):
+        with patch.object(core, 'checked', return_value=self.IGNORE_OUTPUT):
+            self.assertEqual(core.ignored('sshd'), ['127.0.0.0/8', '::1', 'office.example.com', '198.51.100.0/24'])
+        with patch.object(core, 'checked', return_value="['127.0.0.1/8', '::1']"):
+            self.assertEqual(core.ignored('sshd'), ['127.0.0.1/8', '::1'])
+
+    def test_add_ignoreip_appends_to_existing_list_and_persists(self):
+        outputs = [self.IGNORE_OUTPUT, self.IGNORE_OUTPUT + '\n`- 203.0.113.7']
+        def checked(*args, **kwargs):
+            return outputs.pop(0) if args[:3] == ('fail2ban-client', 'get', 'sshd') else 'OK'
+        with patch.object(core, 'checked', side_effect=checked), patch.object(core, 'validate'), patch.object(core, 'reload_service'):
+            ident = core.add_ignoreip('sshd', '203.0.113.7')
+        value = self.override.read_text()
+        self.assertIn('[sshd]', value)
+        self.assertIn('ignoreip = 127.0.0.0/8 ::1 office.example.com 198.51.100.0/24 203.0.113.7', value)
+        self.assertIn(ident, core.backups())
+
+    def test_add_ignoreip_rejects_duplicates_and_bad_input_without_writing(self):
+        with patch.object(core, 'checked', return_value=self.IGNORE_OUTPUT):
+            for bad in ('198.51.100.9', '127.0.0.5'):
+                with self.assertRaisesRegex(ValueError, 'Already ignored'):
+                    core.add_ignoreip('sshd', bad)
+            with self.assertRaises(ValueError):
+                core.add_ignoreip('sshd', 'not-an-ip')
+            with self.assertRaises(ValueError):
+                core.add_ignoreip('--evil', '203.0.113.7')
+        self.assertFalse(self.override.exists())
+        self.assertEqual(core.backups(), [])
+
+    def test_add_ignoreip_masked_by_other_config_rolls_back(self):
+        with patch.object(core, 'checked', return_value=self.IGNORE_OUTPUT), patch.object(core, 'validate'), patch.object(core, 'reload_service'):
+            with self.assertRaisesRegex(RuntimeError, 'Rolled back'):
+                core.add_ignoreip('sshd', '203.0.113.7')
+        self.assertFalse(self.override.exists())
+
+    def test_installed_files_include_every_module(self):
+        for name in core.FILES:
+            self.assertTrue((Path(core.__file__).parent / name).is_file(), name)
+        self.assertIn('f2b_geo.py', core.FILES)
+        self.assertIn('f2b_bans.py', core.FILES)
+
     def test_lock_excludes_other_writer(self):
         with core.locked():
             with self.assertRaisesRegex(RuntimeError, 'Another'):

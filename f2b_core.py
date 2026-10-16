@@ -4,6 +4,7 @@ import contextlib
 import datetime
 import fcntl
 import io
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -13,13 +14,13 @@ import subprocess
 import tempfile
 import uuid
 
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 CONFIG = Path('/etc/fail2ban')
 STATE = Path('/var/lib/f2b-tui')
 INSTALL = Path('/opt/fail2ban-tui')
 LAUNCHER = Path('/usr/local/bin/f2b')
 REPO = 'https://github.com/barakov-dot/f2b-tui.git'
-FILES = ('f2b.py', 'f2b_core.py', 'f2b_ui.py')
+FILES = ('f2b.py', 'f2b_core.py', 'f2b_geo.py', 'f2b_bans.py', 'f2b_ui.py')
 SAFE_PATH = '/usr/sbin:/usr/bin:/sbin:/bin'
 
 
@@ -125,13 +126,63 @@ def reload_service():
     return checked('fail2ban-client', '-c', CONFIG, 'reload', timeout=60)
 
 
-def write_setting(jail, key, value):
+def check_jail(jail):
     if not re.fullmatch(r'[A-Za-z0-9_.-]+', jail) or jail.startswith('-') or jail == 'DEFAULT':
         raise ValueError('Invalid jail / Некорректный jail')
+
+
+def write_setting(jail, key, value):
+    check_jail(jail)
     if key not in ('bantime', 'findtime', 'maxretry'):
         raise ValueError('Invalid setting / Некорректный параметр')
     if not re.fullmatch(r'[0-9]+', value) or not 1 <= int(value) <= 31536000:
         raise ValueError('1..31536000 required / Нужно число от 1 до 31536000')
+
+    def verify():
+        # Detect a later override silently masking the setting.
+        effective = checked('fail2ban-client', 'get', jail, key)
+        if effective.strip() != str(int(value)):
+            raise RuntimeError('Effective value differs / Значение перекрыто другим конфигом: ' + effective)
+    return apply_override(jail, key, str(int(value)), verify)
+
+
+def ignored(jail):
+    """Entries of the jail's effective ignoreip, as Fail2ban prints them."""
+    check_jail(jail)
+    text = checked('fail2ban-client', 'get', jail, 'ignoreip')
+    items = [m.group(1) for m in re.finditer(r'^[|`]-\s*(\S+)', text, re.M)]
+    if not items:
+        for token in re.findall(r'[^\s|`,\[\]\'"]+', text):
+            try:
+                ipaddress.ip_network(token, strict=False)
+                items.append(token)
+            except ValueError:
+                pass
+    return items
+
+
+def add_ignoreip(jail, ip):
+    """Persistently whitelist ip for jail through the managed override file."""
+    check_jail(jail)
+    addr = ipaddress.ip_address(ip)
+    items = ignored(jail)
+    for item in items:
+        try:
+            if addr in ipaddress.ip_network(item, strict=False):
+                raise ValueError('Already ignored / Уже в списке исключений: ' + item)
+        except TypeError:
+            pass
+        except ValueError as exc:
+            if str(exc).startswith('Already'):
+                raise
+    def verify():
+        if str(addr) not in checked('fail2ban-client', 'get', jail, 'ignoreip'):
+            raise RuntimeError('Effective ignoreip differs / ignoreip перекрыт другим конфигом')
+    return apply_override(jail, 'ignoreip', ' '.join([*items, str(addr)]), verify)
+
+
+def apply_override(jail, key, value, verify):
+    """Transactional write of one key into the managed override file."""
     with locked():
         target = CONFIG / 'jail.d' / '99-f2b-tui.local'
         if target.is_symlink() or target.parent.is_symlink():
@@ -144,7 +195,7 @@ def write_setting(jail, key, value):
             cfg.read_string(before.decode('utf-8'))
         if not cfg.has_section(jail):
             cfg.add_section(jail)
-        cfg.set(jail, key, str(int(value)))
+        cfg.set(jail, key, value)
         buf = io.StringIO()
         cfg.write(buf)
         ident = backup('edit ' + jail + ' ' + key)
@@ -153,10 +204,7 @@ def write_setting(jail, key, value):
             atomic_write(target, buf.getvalue().encode(), mode)
             validate()
             reload_service()
-            # Detect a later override silently masking the setting.
-            effective = checked('fail2ban-client', 'get', jail, key)
-            if effective.strip() != str(int(value)):
-                raise RuntimeError('Effective value differs / Значение перекрыто другим конфигом: ' + effective)
+            verify()
         except BaseException as exc:
             try:
                 if before is None:

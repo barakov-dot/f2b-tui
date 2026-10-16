@@ -81,9 +81,11 @@ sudo f2b --lang en
 ```
 
 Use a reviewed full commit SHA or tag for reproducible installation.
-`install-remote.sh [REF]` downloads source **without root**, prints its SHA and
-an installation command, and retains the directory for review. It deliberately
-rejects `curl … | sudo bash`. The installer does not install system packages,
+`install-remote.sh [REF]` downloads source, prints its SHA and an installation
+command, and retains the directory for review; without `--install` it installs nothing.
+As root you may install immediately, accepting the risk (pin REF):
+`curl -fsSL …/install-remote.sh | bash -s -- REF --install`. `curl … | sudo bash`
+is not supported. The installer does not install system packages,
 change the service or overwrite `/etc/fail2ban`. It refuses to replace an unrelated
 `/usr/local/bin/f2b`. Application files live in `/opt/fail2ban-tui`.
 

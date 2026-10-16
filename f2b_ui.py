@@ -89,7 +89,7 @@ TEXT = {
         'g — сети, из которых забанено несколько IP\n'
         'b — заблокировать IP вручную\n'
         'r — обновить сейчас (список обновляется сам каждые 5 с)\n'
-        'L язык · A значки (Unicode → Nerd Font → ASCII) · F флаги\n'
+        'L язык · A значки (Unicode → Nerd Font → ASCII) · F флаги (цветной значок → эмодзи → выкл.)\n'
         'ESC / q — назад',
         '↑↓ j k PgUp PgDn Home End — move\n'
         'Enter — unban the marked (or selected) IPs\n'
@@ -101,7 +101,7 @@ TEXT = {
         'g — networks with several banned IPs\n'
         'b — ban an IP manually\n'
         'r — refresh now (the list refreshes itself every 5 s)\n'
-        'L language · A icons (Unicode → Nerd Font → ASCII) · F flags\n'
+        'L language · A icons (Unicode → Nerd Font → ASCII) · F flags (colour badge → emoji → off)\n'
         'ESC / q — back'),
     # IP info
     'f_jail': ('Jail', 'Jail'), 'f_since': ('Забанен', 'Banned at'), 'f_until': ('Разбан', 'Unban at'),
@@ -134,6 +134,25 @@ NERD_ICONS = ['', '', '', '', '', '', '', '', '', '�
 # Colour pair per menu action: cyan 1, yellow 3, red 4, green 5, magenta 6, blue 7.
 ICON_COLORS = [1, 7, 5, 4, 3, 7, 6, 1, 5, 3, 4, 7, 6, 1, 4]
 MODES = ('unicode', 'nerd', 'ascii')
+FLAG_STYLES = ('badge', 'emoji', 'off')
+# xterm-256 colours: red 160, blue 26, navy 18, white 255, black 16, green 28, yellow 220, orange 208, sky 39.
+FLAG_COLORS = {
+    'US': (160, 26), 'CN': (160, 220), 'RU': (26, 160), 'NL': (160, 26), 'DE': (16, 160), 'FR': (26, 160), 'GB': (18, 160),
+    'IN': (208, 28), 'KR': (255, 160), 'TR': (160, 255), 'PH': (26, 160), 'AD': (26, 220), 'GP': (26, 160), 'VN': (160, 220),
+    'BR': (28, 220), 'ID': (160, 255), 'UA': (26, 220), 'PL': (255, 160), 'RO': (26, 220), 'BG': (255, 28), 'HU': (160, 28),
+    'SG': (160, 255), 'HK': (160, 255), 'JP': (255, 160), 'CA': (160, 255), 'AU': (18, 160), 'IT': (28, 160), 'ES': (160, 220),
+    'SE': (26, 220), 'FI': (255, 26), 'CH': (160, 255), 'AT': (160, 255), 'CZ': (255, 26), 'IE': (28, 208), 'BE': (16, 220),
+    'DK': (160, 255), 'NO': (160, 26), 'MX': (28, 160), 'AR': (39, 255), 'ZA': (28, 220), 'IR': (28, 160), 'PK': (28, 255),
+    'BD': (28, 160), 'TH': (160, 26), 'MY': (160, 26), 'IL': (255, 26), 'EG': (160, 16), 'NG': (28, 255), 'KZ': (39, 220),
+    'LT': (220, 28), 'LV': (88, 255), 'EE': (26, 16), 'MD': (26, 220), 'BY': (160, 28), 'GE': (255, 160), 'AM': (160, 208),
+    'CL': (26, 160), 'CO': (220, 26), 'PE': (160, 255), 'VE': (220, 26), 'TW': (160, 26), 'LU': (160, 39), 'PT': (28, 160),
+    'GR': (26, 255), 'RS': (160, 26), 'SK': (255, 26), 'SI': (255, 26), 'HR': (160, 26), 'NZ': (18, 160), 'UZ': (39, 28),
+    'KG': (160, 220), 'MN': (160, 26), 'BA': (26, 220), 'AL': (160, 16), 'MA': (160, 28), 'DZ': (28, 255), 'KE': (16, 160),
+    'SA': (28, 255), 'AE': (28, 160), 'IQ': (160, 16), 'LK': (220, 88), 'NP': (160, 26), 'KH': (26, 160), 'MM': (220, 28),
+}
+BASIC_COLORS = {160: 1, 88: 1, 26: 4, 18: 4, 255: 7, 16: 0, 28: 2, 220: 3, 208: 3, 39: 6}
+LIGHT_COLORS = {255, 220, 208, 39}
+FALLBACK_PALETTE = [(26, 28), (88, 220), (18, 39), (28, 255), (160, 16), (208, 26)]
 SORTS = ('time', 'country', 'network', 'jail', 'ip')
 
 
@@ -187,7 +206,8 @@ class UI:
         self.lang = lang or ('ru' if locale.getlocale()[0] and locale.getlocale()[0].startswith('ru') else 'en')
         forced_ascii = ascii_mode or 'UTF' not in locale.getpreferredencoding(False).upper()
         self.mode = 'ascii' if forced_ascii else ('nerd' if nerd else 'unicode')
-        self.flags = True
+        self.flag_style = 'badge'
+        self.pairs = {}
         self.colors = False
         self.geo = geo.Geo()
         try:
@@ -201,7 +221,10 @@ class UI:
                     self.mode = 'ascii'
             elif prefs.get('ascii'):
                 self.mode = 'ascii'
-            self.flags = bool(prefs.get('flags', True))
+            if prefs.get('flag_style') in FLAG_STYLES:
+                self.flag_style = prefs['flag_style']
+            elif prefs.get('flags') is False:
+                self.flag_style = 'off'
         except (OSError, ValueError, AttributeError):
             pass
         try:
@@ -280,7 +303,7 @@ class UI:
         try:
             with core.locked():
                 core.atomic_write(core.STATE / 'preferences.json', json.dumps(
-                    {'language': self.lang, 'ascii': self.ascii, 'icons': self.mode, 'flags': self.flags}).encode())
+                    {'language': self.lang, 'ascii': self.ascii, 'icons': self.mode, 'flag_style': self.flag_style}).encode())
         except (OSError, RuntimeError) as exc:
             self.page(self.t('error'), str(exc))
 
@@ -290,7 +313,7 @@ class UI:
         elif key in ('a', 'A'):
             self.mode = MODES[(MODES.index(self.mode) + 1) % len(MODES)]
         elif key in ('f', 'F'):
-            self.flags = not self.flags
+            self.flag_style = FLAG_STYLES[(FLAG_STYLES.index(self.flag_style) + 1) % len(FLAG_STYLES)]
         else:
             return False
         self.save_preferences()
@@ -471,19 +494,54 @@ class UI:
 
     # ------------------------------------------------------------ geography helpers
 
+    def emoji_flags(self):
+        return self.flag_style == 'emoji' and not self.ascii
+
     def cc_code(self, info):
-        """Fixed-width country cell for tables: flag, space, code."""
+        """Fixed-width country cell for tables (badge colours are painted over it afterwards)."""
         code = info.get('cc', '')
-        if self.ascii or not self.flags:
-            return pad(code or ('--' if self.ascii else '··'), 2)
-        flag = geo.flag(code)
-        return f'{flag} {code}' if flag else '   ··'
+        if self.emoji_flags():
+            flag = geo.flag(code)
+            return f'{flag} {code}' if flag else '   ··'
+        return pad(code or ('--' if self.ascii else '··'), 2)
 
     def cc_cell(self, info):
-        """Free-form country text. Flag emoji width differs between terminals, so never mid-column."""
+        """Free-form country text."""
         code = info.get('cc', '')
-        flag = geo.flag(code) if self.flags and not self.ascii else ''
-        return f'{code} {flag}'.strip()
+        flag = geo.flag(code) if self.emoji_flags() else ''
+        return f'{flag} {code}'.strip()
+
+    def badge_attr(self, fg, bg):
+        if not self.colors:
+            return None
+        if curses.COLORS < 256:
+            fg, bg = BASIC_COLORS.get(fg, 7), BASIC_COLORS.get(bg, 0)
+        key = (fg, bg)
+        number = self.pairs.get(key)
+        if number is None:
+            number = 20 + len(self.pairs)
+            try:
+                if number >= curses.COLOR_PAIRS:
+                    return None
+                curses.init_pair(number, fg, bg)
+            except curses.error:
+                return None
+            self.pairs[key] = number
+        return curses.color_pair(number) | curses.A_BOLD
+
+    def draw_badge(self, y, x, code):
+        """Two-letter country code, each letter on one of the flag's colours."""
+        if self.flag_style != 'badge' or not re.fullmatch(r'[A-Z]{2}', code or ''):
+            return
+        colors = FLAG_COLORS.get(code) or FALLBACK_PALETTE[(ord(code[0]) * 31 + ord(code[1])) % len(FALLBACK_PALETTE)]
+        for offset, bg in enumerate(colors):
+            light = bg in LIGHT_COLORS
+            fg = 16 if light else 231
+            if self.colors and curses.COLORS < 256:
+                fg = 0 if light else 7
+            attr = self.badge_attr(fg, bg)
+            if attr is not None:
+                self.put(y, x + offset, code[offset], attr)
 
     def info_lines(self, ip, ban=None):
         info = self.geo.lookup(ip)
@@ -502,7 +560,7 @@ class UI:
         except ValueError:
             pass
         code = info.get('cc', '')
-        field('f_country', ' '.join(x for x in (geo.flag(code) if not self.ascii and self.flags else '', code, info.get('country', '')) if x))
+        field('f_country', ' '.join(x for x in (geo.flag(code) if self.emoji_flags() else '', code, info.get('country', '')) if x))
         field('f_city', ', '.join(x for x in (info.get('city'), info.get('region')) if x))
         field('f_cidr', info.get('cidr'))
         field('f_asn', f'AS{info["asn"]}' if info.get('asn') else '')
@@ -582,7 +640,7 @@ class UI:
                     ipw = max([11] + [len(b['ip']) for b in shown])
                     jw = max([4] + [len(b['jail']) for b in shown])
                     on, off = ('[x]', '[ ]') if self.ascii else ('●', '○')
-                    cc_w = 2 if self.ascii or not self.flags else 5
+                    cc_w = 5 if self.emoji_flags() else 2
                     left_w = 8
                     fixed = 2 + len(on) + 1 + cc_w + 1 + ipw + 1 + jw + 1 + left_w + 1
                     head = f'  {" " * len(on)} {pad("CC", cc_w)} {pad(self.t("col_ip"), ipw)} {pad(self.t("col_jail"), jw)} {self.t("col_left"):>{left_w}} {self.t("col_net") if w - 4 - fixed >= 8 else ""}'
@@ -601,6 +659,7 @@ class UI:
                                 f'{pad(b["ip"], ipw)} {pad(b["jail"], jw)} {left:>{left_w}} {you}{b["net"]}')
                         attr = self.color(2) if selected else (self.color(3) if b['ip'] in own else 0)
                         self.put(row + 4, 2, fill(line, w - 5) if selected else line, attr)
+                        self.draw_badge(row + 4, 5 + len(on), info.get('cc', ''))
                     status = [f'{pos + 1 if view else 0} / {len(view)}']
                     if len(view) != len(rows):
                         status[0] += f' ({len(rows)})'

@@ -1,0 +1,20 @@
+name: Tests
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit and interaction tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Shell syntax
+        run: bash -n install.sh install-remote.sh uninstall.sh
+      - name: Install real Fail2ban
+        run: sudo apt-get update && sudo apt-get install -y fail2ban
+      - name: Live daemon and installation lifecycle
+        run: sudo python3 tests/integration_linux.py

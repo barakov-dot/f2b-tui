@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-if [[ $EUID -ne 0 ]]; then echo 'Run with sudo'; exit 1; fi
-rm -f /usr/local/bin/f2b
-rm -f /opt/fail2ban-tui/f2b.py
-rmdir /opt/fail2ban-tui 2>/dev/null || true
-echo 'Removed program; managed Fail2ban overrides preserved.'
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+exec /usr/bin/python3 -I "$SCRIPT_DIR/f2b.py" uninstall "$@"

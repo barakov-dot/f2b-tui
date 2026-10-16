@@ -111,7 +111,7 @@ def validate():
 
 
 def reload_service():
-    return checked('fail2ban-client', 'reload', timeout=60)
+    return checked('fail2ban-client', '-c', CONFIG, 'reload', timeout=60)
 
 
 def write_setting(jail, key, value):

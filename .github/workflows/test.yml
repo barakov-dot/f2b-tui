@@ -5,6 +5,7 @@ permissions:
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
@@ -18,3 +19,17 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y fail2ban
       - name: Live daemon and installation lifecycle
         run: sudo python3 tests/integration_linux.py
+      - name: Public CLI install, pinned network update, backup and uninstall
+        env:
+          TEST_REF: ${{ github.sha }}
+        run: |
+          sudo find /etc/fail2ban -type f -exec sha256sum {} + | sort > /tmp/config-before
+          sudo bash install.sh
+          sudo f2b --version
+          sudo f2b backup
+          sudo f2b update --ref "$TEST_REF" --yes
+          sudo f2b backups
+          sudo f2b uninstall --yes
+          test ! -e /usr/local/bin/f2b
+          sudo find /etc/fail2ban -type f -exec sha256sum {} + | sort > /tmp/config-after
+          diff -u /tmp/config-before /tmp/config-after

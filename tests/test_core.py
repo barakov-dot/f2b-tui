@@ -29,6 +29,11 @@ class CoreTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.addCleanup(self.stack.close)
 
+    def test_reload_uses_validated_configuration_directory(self):
+        with patch.object(core, 'checked', return_value='OK') as command:
+            core.reload_service()
+        command.assert_called_once_with('fail2ban-client', '-c', self.config, 'reload', timeout=60)
+
     def test_backup_preserves_bytes_permissions_and_links(self):
         (self.config / 'jail.local').chmod(0o640)
         (self.config / 'linked').symlink_to('jail.local')

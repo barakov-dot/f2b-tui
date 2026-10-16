@@ -80,6 +80,17 @@ def atomic_write(path, data, mode=0o600):
             os.unlink(name)
 
 
+def copy_config(source, target):
+    """copy2 preserves modes/times; explicitly retain ownership, including links."""
+    shutil.copytree(source, target, symlinks=True)
+    for directory, dirs, files in os.walk(source, followlinks=False):
+        for path in [Path(directory), *(Path(directory) / name for name in dirs + files)]:
+            destination = target / path.relative_to(source)
+            before, after = path.lstat(), destination.lstat()
+            if (before.st_uid, before.st_gid) != (after.st_uid, after.st_gid):
+                os.chown(destination, before.st_uid, before.st_gid, follow_symlinks=False)
+
+
 def backup(reason='manual'):
     """Caller holds lock. Publish only complete snapshots; keep symbolic links as links."""
     if CONFIG.is_symlink() or not CONFIG.is_dir():
@@ -89,7 +100,7 @@ def backup(reason='manual'):
     ident = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ-') + uuid.uuid4().hex[:8]
     staging = Path(tempfile.mkdtemp(prefix='.pending-', dir=root))
     try:
-        shutil.copytree(CONFIG, staging / 'config', symlinks=True)
+        copy_config(CONFIG, staging / 'config')
         atomic_write(staging / 'metadata.json', json.dumps({'reason': reason, 'version': VERSION}).encode())
         os.rename(staging, root / ident)
     finally:
@@ -172,7 +183,7 @@ def restore(ident):
         old = staging / 'previous'
         moved = False
         try:
-            shutil.copytree(source, staging / 'next', symlinks=True)
+            copy_config(source, staging / 'next')
             checked('fail2ban-client', '-c', staging / 'next', '-t')
             os.rename(CONFIG, old)
             moved = True
@@ -238,9 +249,13 @@ def install(source):
                 os.rename(INSTALL, old)
             os.rename(new, INSTALL)
             activated = True
-            temp_link = staging / 'launcher'
-            temp_link.symlink_to(INSTALL / 'f2b.py')
-            os.replace(temp_link, LAUNCHER)
+            # Create the temporary symlink on the destination filesystem.
+            temp_link = LAUNCHER.parent / ('.f2b-link-' + uuid.uuid4().hex)
+            try:
+                temp_link.symlink_to(INSTALL / 'f2b.py')
+                os.replace(temp_link, LAUNCHER)
+            finally:
+                temp_link.unlink(missing_ok=True)
             checked('/usr/bin/python3', '-I', INSTALL / 'f2b.py', '--version')
             success = True
         except BaseException:

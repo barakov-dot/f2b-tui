@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 import sys
 
+sys.dont_write_bytecode = True
+
 # -I excludes script directory too: import only this resolved, trusted installation.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import f2b_core as core
@@ -64,7 +66,7 @@ def main(argv=None):
             with core.update_source(args.ref) as (source, commit):
                 if confirm('Install code from / Установить код из ' + core.REPO + '\nCommit: ' + commit, args.yes):
                     # Use the downloaded installer so future release migrations are supported.
-                    core.checked('/bin/bash', source / 'install.sh', timeout=180)
+                    print(core.checked('/bin/bash', source / 'install.sh', timeout=180))
                     print('Updated / Обновлено:', commit)
         else:
             import curses

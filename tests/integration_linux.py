@@ -30,6 +30,7 @@ def main():
             return original_run(*args, **kwargs)
         try:
             with patch.object(core, 'CONFIG', config), patch.object(core, 'STATE', root / 'state'), patch.object(core, 'run', side_effect=isolated_run):
+                os.chown(config / 'jail.local', 65534, 65534)
                 customer = (config / 'jail.local').read_bytes()
                 with core.locked():
                     snapshot = core.backup()
@@ -60,6 +61,8 @@ def main():
                 core.restore(snapshot)
                 assert core.checked('fail2ban-client', 'get', 'f2b-test', 'bantime') == '30'
                 assert not (config / 'jail.d/99-f2b-tui.local').exists()
+                assert (config / 'jail.local').stat().st_uid == 65534
+                assert (config / 'jail.local').stat().st_gid == 65534
                 assert (config / 'jail.local').read_bytes() == customer
                 # Real staged install smoke checks, upgrade, and removal, under a private prefix.
                 with patch.object(core, 'INSTALL', root / 'opt/app'), patch.object(core, 'LAUNCHER', root / 'bin/f2b'):
@@ -69,6 +72,7 @@ def main():
                     core.install(source)
                     core.uninstall()
                     assert not core.LAUNCHER.exists()
+                    assert not core.INSTALL.exists()
                     assert (config / 'jail.local').read_bytes() == customer
                 print('PASS: live IPv4/IPv6 ban/unban, edit/reload, rollback, restore, install/update/uninstall; customer config unchanged')
         finally:

@@ -156,6 +156,16 @@ class CoreTests(unittest.TestCase):
                 core.install(Path(__file__).resolve().parents[1])
         self.assertEqual((self.install / 'f2b.py').read_text(), 'old version')
 
+    def test_launcher_replace_stays_on_destination_filesystem(self):
+        original = core.os.replace
+        def replace(source, destination):
+            if Path(destination) == self.launcher:
+                self.assertEqual(Path(source).parent, self.launcher.parent)
+            return original(source, destination)
+        with patch.object(core, 'checked', return_value='OK'), patch.object(core.os, 'replace', side_effect=replace):
+            core.install(Path(__file__).resolve().parents[1])
+        self.assertTrue(self.launcher.is_symlink())
+
     def test_unrelated_launcher_is_preserved(self):
         self.launcher.parent.mkdir()
         self.launcher.write_text('owned by user')

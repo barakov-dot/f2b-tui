@@ -131,6 +131,8 @@ TEXT = {
 ACTIONS = ['overview', 'details', 'unban', 'ban', 'edit', 'logs', 'follow', 'geo', 'test', 'reload', 'restart', 'backup', 'restore', 'language', 'exit']
 ICONS = ['◈', '▣', '⊖', '⊕', '⚙', '≡', '◉', '◍', '✓', '↻', '↯', '▤', '↶', '⌘', '×']
 NERD_ICONS = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+# Colour pair per menu action: cyan 1, yellow 3, red 4, green 5, magenta 6, blue 7.
+ICON_COLORS = [1, 7, 5, 4, 3, 7, 6, 1, 5, 3, 4, 7, 6, 1, 4]
 MODES = ('unicode', 'nerd', 'ascii')
 SORTS = ('time', 'country', 'network', 'jail', 'ip')
 
@@ -214,6 +216,7 @@ class UI:
                 curses.init_pair(4, curses.COLOR_RED, -1)
                 curses.init_pair(5, curses.COLOR_GREEN, -1)
                 curses.init_pair(6, curses.COLOR_MAGENTA, -1)
+                curses.init_pair(7, curses.COLOR_BLUE, -1)
                 self.colors = True
         except curses.error:
             pass
@@ -317,9 +320,19 @@ class UI:
                     self.put(4 + row, 2, text, attr)
                 for row, i in enumerate(range(start, min(len(choices), start + rows))):
                     label = self.t(choices[i]) if translate else choices[i]
-                    icon = self.icon(i) if icons else '-'
-                    line = f'{">" if i == pos else " "} {icon}  {label}'
-                    self.put(row + first, 2, pad(line, w - 5) if i == pos else line, self.color(2) if i == pos else 0)
+                    selected = i == pos
+                    y = row + first
+                    if not icons:
+                        line = f'{">" if selected else " "} -  {label}'
+                        self.put(y, 2, fill(line, w - 5) if selected else line, self.color(2) if selected else 0)
+                        continue
+                    # Icon cell is drawn separately so each icon keeps its own colour and width.
+                    if selected:
+                        self.put(y, 2, fill('', w - 5), self.color(2))
+                    self.put(y, 2, '>' if selected else ' ', self.color(2) if selected else 0)
+                    icon_attr = self.color(2) | curses.A_BOLD if selected else self.color(ICON_COLORS[i % len(ICON_COLORS)]) | curses.A_BOLD
+                    self.put(y, 4, self.icon(i), icon_attr)
+                    self.put(y, 8, label, self.color(2) if selected else 0)
                 self.put(h - 3, 2, f'{pos + 1} / {len(choices)}', self.color(3))
             self.s.refresh()
             key = self.key()
@@ -459,7 +472,12 @@ class UI:
     # ------------------------------------------------------------ geography helpers
 
     def cc_code(self, info):
-        return info.get('cc') or ('--' if self.ascii else '··')
+        """Fixed-width country cell for tables: flag, space, code."""
+        code = info.get('cc', '')
+        if self.ascii or not self.flags:
+            return pad(code or ('--' if self.ascii else '··'), 2)
+        flag = geo.flag(code)
+        return f'{flag} {code}' if flag else '   ··'
 
     def cc_cell(self, info):
         """Free-form country text. Flag emoji width differs between terminals, so never mid-column."""
@@ -564,7 +582,7 @@ class UI:
                     ipw = max([11] + [len(b['ip']) for b in shown])
                     jw = max([4] + [len(b['jail']) for b in shown])
                     on, off = ('[x]', '[ ]') if self.ascii else ('●', '○')
-                    cc_w = 2
+                    cc_w = 2 if self.ascii or not self.flags else 5
                     left_w = 8
                     fixed = 2 + len(on) + 1 + cc_w + 1 + ipw + 1 + jw + 1 + left_w + 1
                     head = f'  {" " * len(on)} {pad("CC", cc_w)} {pad(self.t("col_ip"), ipw)} {pad(self.t("col_jail"), jw)} {self.t("col_left"):>{left_w}} {self.t("col_net") if w - 4 - fixed >= 8 else ""}'
@@ -579,9 +597,8 @@ class UI:
                             left = 'perm'
                         info = self.geo.lookup(b['ip'])
                         you = f'({self.t("you")}) ' if b['ip'] in own else ''
-                        flag = geo.flag(info.get('cc', '')) if self.flags and not self.ascii else ''
                         line = (f'{">" if selected else " "} {on if (b["jail"], b["ip"]) in marks else off} {pad(self.cc_code(info), cc_w)} '
-                                f'{pad(b["ip"], ipw)} {pad(b["jail"], jw)} {left:>{left_w}} {you}{b["net"]}' + (f'  {flag}' if flag else ''))
+                                f'{pad(b["ip"], ipw)} {pad(b["jail"], jw)} {left:>{left_w}} {you}{b["net"]}')
                         attr = self.color(2) if selected else (self.color(3) if b['ip'] in own else 0)
                         self.put(row + 4, 2, fill(line, w - 5) if selected else line, attr)
                     status = [f'{pos + 1 if view else 0} / {len(view)}']

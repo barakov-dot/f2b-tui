@@ -131,6 +131,13 @@ def check_jail(jail):
         raise ValueError('Invalid jail / Некорректный jail')
 
 
+def get_setting(jail, key):
+    check_jail(jail)
+    if key not in ('bantime', 'findtime', 'maxretry'):
+        raise ValueError('Invalid setting / Некорректный параметр')
+    return checked('fail2ban-client', 'get', jail, key).strip()
+
+
 def write_setting(jail, key, value):
     check_jail(jail)
     if key not in ('bantime', 'findtime', 'maxretry'):

@@ -175,6 +175,53 @@ class BanListTests(UITests):
         for expected in ('Hetzner', '203.0.113.0/24', 'AS24940', 'DE', 'sshd'):
             self.assertIn(expected, text)
 
+    def test_settings_screen_shows_current_values(self):
+        values = {'bantime': '86400', 'findtime': '600', 'maxretry': '5'}
+        ui = self.ui(['\x1b'], size=(24, 100))
+        with patch('f2b_ui.core.get_setting', side_effect=lambda jail, key: values[key]):
+            ui.edit_settings('sshd')
+        text = '\n'.join(ui.s.drawn)
+        for expected in ('86400 с = 24 ч', '600 с', '5 попыток'):
+            self.assertIn(expected, text)
+        ui = self.ui([], lang='en')
+        self.assertEqual(ui.format_setting('bantime', '5400'), '5400 s = 1.5 h')
+        self.assertEqual(ui.format_setting('bantime', '-1'), 'permanent')
+        self.assertEqual(ui.format_setting('maxretry', '3'), '3 attempts')
+        self.assertEqual(ui.format_setting('bantime', '10m'), '10m')
+
+    def test_settings_edit_applies_and_returns_to_same_item(self):
+        values = {'bantime': '3600', 'findtime': '600', 'maxretry': '5'}
+        def write(jail, key, value):
+            values[key] = value
+            return 'backup-id'
+        # Down to findtime, Enter, type 900, Enter, YES, Enter; page closed by ESC; ESC leaves the menu.
+        keys = [curses.KEY_DOWN, '\n', '9', '0', '0', '\n', 'Y', 'E', 'S', '\n', '\x1b', '\x1b']
+        ui = self.ui(keys, size=(24, 100))
+        with patch('f2b_ui.core.get_setting', side_effect=lambda jail, key: values[key]), patch('f2b_ui.core.write_setting', side_effect=write), \
+                patch('curses.curs_set', side_effect=curses.error):
+            ui.edit_settings('sshd')
+        self.assertEqual(values['findtime'], '900')
+        self.assertTrue(any('900 с' in line for line in ui.s.drawn))
+
+    def test_menu_start_position_and_no_static_log_item(self):
+        self.assertNotIn('logs', ACTIONS)
+        ui = self.ui(['\n'])
+        self.assertEqual(ui.menu('menu', ACTIONS, True, True, start=4), 4)
+        ui = self.ui(['\n'])
+        self.assertEqual(ui.menu('menu', ACTIONS, True, True, start=999), len(ACTIONS) - 1)
+
+    def test_footer_shows_every_hotkey_without_clipping(self):
+        for width in (60, 80, 120):
+            ui = self.ui([], size=(30, width))
+            ui.frame('x', ui.t('bans_nav'))
+            shown = ' '.join(line for line in ui.s.drawn if line)
+            for hint in ('Enter разбан', 'Пробел отметить', '* все', '/ поиск', 's сортировка', 'i инфо', 'o онлайн', 'g сети', 'b бан', 'r обновить', 'L язык', 'A значки', 'F флаги', '? помощь', 'ESC назад'):
+                self.assertIn(hint, shown, f'{hint} missing at width {width}')
+            self.assertLessEqual(ui.fh, 4)
+        ui = self.ui([], size=(30, 60), ascii_mode=True)
+        ui.frame('x', ui.t('nav'))
+        self.assertTrue(any('Up/Down' in line for line in ui.s.drawn))
+
     def test_help_texts_cover_both_languages(self):
         self.assertTrue(TEXT['help_bans'][0] and TEXT['help_bans'][1])
 

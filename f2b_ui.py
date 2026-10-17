@@ -31,9 +31,9 @@ TEXT = {
     'backup': ('Создать резервную копию', 'Create configuration backup'),
     'restore': ('Восстановить конфигурацию', 'Restore configuration'),
     'language': ('Язык / Language', 'Language / Язык'), 'exit': ('Выход', 'Exit'),
-    'nav': ('↑↓ выбор · Enter открыть · ESC назад · L язык · A значки · F флаги', '↑↓ select · Enter open · ESC back · L language · A icons · F flags'),
-    'nav_ascii': ('Up/Down: выбор | Enter: открыть | ESC: назад | L: язык | A: значки', 'Up/Down: select | Enter: open | ESC: back | L: language | A: icons'),
-    'back': ('↑↓ / PgUp/PgDn прокрутка · ESC назад', '↑↓ / PgUp/PgDn scroll · ESC back'),
+    'nav': ('↑↓ jk выбор · Enter открыть · Home/End · PgUp/PgDn · L язык · A значки · F флаги · ESC назад', '↑↓ jk select · Enter open · Home/End · PgUp/PgDn · L language · A icons · F flags · ESC back'),
+    'nav_main': ('↑↓ jk выбор · Enter открыть · Home/End · PgUp/PgDn · L язык · A значки · F флаги · q/ESC выход', '↑↓ jk select · Enter open · Home/End · PgUp/PgDn · L language · A icons · F flags · q/ESC quit'),
+    'back': ('↑↓ jk PgUp/PgDn ←→ прокрутка · Enter/ESC/q назад', '↑↓ jk PgUp/PgDn ←→ scroll · Enter/ESC/q back'),
     'input': ('Enter — принять; ESC — отмена', 'Enter to submit; ESC to cancel'),
     'confirm': ('Введите YES для подтверждения', 'Type YES to confirm'),
     'empty': ('Нет данных', 'No data'), 'choose': ('Выберите jail', 'Choose jail'),
@@ -53,8 +53,8 @@ TEXT = {
     'banned_now': ('сейчас в бане', 'banned now'), 'banned_total': ('всего банов', 'total bans'),
     'jails_word': ('jail', 'jails'),
     # banned IP list
-    'bans_nav': ('Enter разбан · Пробел отметка · / поиск · s сортировка · i инфо · ? помощь · ESC', 'Enter unban · Space mark · / search · s sort · i info · ? help · ESC'),
-    'bans_nav_short': ('Enter разбан · Пробел · / · ? · ESC', 'Enter unban · Space · / · ? · ESC'),
+    'bans_nav': ('↑↓ jk выбор · Enter разбан · Пробел отметить · * все · / поиск · s сортировка · i инфо · o онлайн · g сети · b бан · r обновить · L язык · A значки · F флаги · ? помощь · ESC назад',
+                 '↑↓ jk select · Enter unban · Space mark · * all · / search · s sort · i info · o online · g networks · b ban · r refresh · L language · A icons · F flags · ? help · ESC back'),
     'col_ip': ('IP-адрес', 'IP address'), 'col_jail': ('Jail', 'Jail'), 'col_left': ('Осталось', 'Left'),
     'col_net': ('Сеть / провайдер', 'Network / provider'),     'sort': ('сортировка', 'sort'), 'you': ('вы', 'you'),
     'sort_time': ('время', 'time'), 'sort_country': ('страна', 'country'), 'sort_network': ('сеть', 'network'),
@@ -125,14 +125,17 @@ TEXT = {
     'cache_cleared': ('Кэш очищен', 'Cache cleared'),
     'cancelled': ('Отменено', 'Cancelled'),
     # live log
-    'follow_nav': ('↑↓ PgUp/PgDn прокрутка · End / f — следить · ESC назад', '↑↓ PgUp/PgDn scroll · End / f follow · ESC back'),
+    'follow_nav': ('↑↓ PgUp/PgDn Home прокрутка · End/f следить · ESC назад', '↑↓ PgUp/PgDn Home scroll · End/f follow · ESC back'),
+    'now': ('сейчас', 'now'), 'hours': ('ч', 'h'), 'sec_short': ('с', 's'), 'tries': ('попыток', 'attempts'),
+    'forever': ('навсегда', 'permanent'),
+    'bantime_hint': ('в секундах; 1 ч = 3600, 24 ч = 86400', 'in seconds; 1 h = 3600, 24 h = 86400'),
     'live': ('● LIVE', '● LIVE'), 'paused': ('Ⅱ пауза', 'Ⅱ paused'),
 }
-ACTIONS = ['overview', 'details', 'unban', 'ban', 'edit', 'logs', 'follow', 'geo', 'test', 'reload', 'restart', 'backup', 'restore', 'language', 'exit']
-ICONS = ['◈', '▣', '⊖', '⊕', '⚙', '≡', '◉', '◍', '✓', '↻', '↯', '▤', '↶', '⌘', '×']
-NERD_ICONS = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+ACTIONS = ['overview', 'details', 'unban', 'ban', 'edit', 'follow', 'geo', 'test', 'reload', 'restart', 'backup', 'restore', 'language', 'exit']
+ICONS = ['◈', '▣', '⊖', '⊕', '⚙', '◉', '◍', '✓', '↻', '↯', '▤', '↶', '⌘', '×']
+NERD_ICONS = ['\uf0e4', '\uf03a', '\uf09c', '\uf05e', '\uf013', '\uf21e', '\uf0ac', '\uf00c', '\uf021', '\uf011', '\uf0c7', '\uf0e2', '\uf1ab', '\uf08b']
 # Colour pair per menu action: cyan 1, yellow 3, red 4, green 5, magenta 6, blue 7.
-ICON_COLORS = [1, 7, 5, 4, 3, 7, 6, 1, 5, 3, 4, 7, 6, 1, 4]
+ICON_COLORS = [1, 7, 5, 4, 3, 6, 1, 5, 3, 4, 7, 6, 1, 4]
 MODES = ('unicode', 'nerd', 'ascii')
 FLAG_STYLES = ('badge', 'emoji', 'off')
 # xterm-256 colours: red 160, blue 26, navy 18, white 255, black 16, green 28, yellow 220, orange 208, sky 39.
@@ -208,6 +211,7 @@ class UI:
         self.mode = 'ascii' if forced_ascii else ('nerd' if nerd else 'unicode')
         self.flag_style = 'badge'
         self.pairs = {}
+        self.fh = 1
         self.colors = False
         self.geo = geo.Geo()
         try:
@@ -262,16 +266,35 @@ class UI:
     def color(self, n):
         return curses.color_pair(n) if self.colors else (curses.A_REVERSE if n == 2 else curses.A_BOLD)
 
+    def footer_lines(self, text, width):
+        """Pack hotkey hints into as few lines as fit, never splitting a hint."""
+        if not text:
+            return ['']
+        sep = ' | ' if self.ascii else ' · '
+        lines, current = [], ''
+        for part in text.split(' · '):
+            if self.ascii:
+                part = part.replace('↑↓', 'Up/Down').replace('←→', 'Left/Right')
+            candidate = current + sep + part if current else part
+            if current and cell_width(candidate) > width:
+                lines.append(current)
+                candidate = part
+            current = candidate
+        return (lines + [current])[:4 if self.s.getmaxyx()[0] >= 20 else 2]
+
     def frame(self, title, footer=None):
         self.s.erase()
         h, w = self.s.getmaxyx()
+        lines = self.footer_lines(footer if footer is not None else self.t('nav'), max(10, w - 3))
+        self.fh = len(lines)
         right = f'{self.lang.upper()} · {self.mode}'
         self.put(0, 1, f'F2B / {core.VERSION}', self.color(1) | curses.A_BOLD)
         self.put(0, max(1, w - 2 - cell_width(right)), right, self.color(1) | curses.A_BOLD)
         self.put(1, 1, ('-' if self.ascii else '─') * max(0, w - 3), self.color(1))
         self.put(2, 2, title, curses.A_BOLD)
-        self.put(h - 2, 1, ('-' if self.ascii else '─') * max(0, w - 3), self.color(1))
-        self.put(h - 1, 1, footer or self.t('nav_ascii' if self.ascii else 'nav'), self.color(1))
+        self.put(h - self.fh - 1, 1, ('-' if self.ascii else '─') * max(0, w - 3), self.color(1))
+        for i, line in enumerate(lines):
+            self.put(h - self.fh + i, 1, line, self.color(1))
         if h < 12 or w < 48:
             self.s.erase()
             self.put(0, 0, self.t('size'))
@@ -324,24 +347,24 @@ class UI:
             return f'{i + 1:02d}'
         return (NERD_ICONS if self.mode == 'nerd' else ICONS)[i]
 
-    def menu(self, title, choices, translate=False, icons=False, header=None):
-        pos = 0
+    def menu(self, title, choices, translate=False, icons=False, header=None, start=0, footer=None):
+        pos = min(max(0, start), max(0, len(choices) - 1))
         if not choices:
             self.page(title, self.t('empty'))
             return None
         header = header or []
         while True:
-            ready = self.frame(self.t(title) if translate else title)
+            ready = self.frame(self.t(title) if translate else title, footer)
             h, w = self.s.getmaxyx()
-            total_rows = max(1, h - 7)
+            total_rows = max(1, h - 6 - self.fh)
             head = min(len(header), max(0, total_rows - 10))  # Never starve the menu itself.
             rows = max(1, total_rows - (head + 1 if head else 0))
             first = 4 + (head + 1 if head else 0)
-            start = max(0, pos - rows + 1)
+            top = max(0, pos - rows + 1)
             if ready:
                 for row, (text, attr) in enumerate(header[:head]):
                     self.put(4 + row, 2, text, attr)
-                for row, i in enumerate(range(start, min(len(choices), start + rows))):
+                for row, i in enumerate(range(top, min(len(choices), top + rows))):
                     label = self.t(choices[i]) if translate else choices[i]
                     selected = i == pos
                     y = row + first
@@ -356,7 +379,7 @@ class UI:
                     icon_attr = self.color(2) | curses.A_BOLD if selected else self.color(ICON_COLORS[i % len(ICON_COLORS)]) | curses.A_BOLD
                     self.put(y, 4, self.icon(i), icon_attr)
                     self.put(y, 8, label, self.color(2) if selected else 0)
-                self.put(h - 3, 2, f'{pos + 1} / {len(choices)}', self.color(3))
+                self.put(h - self.fh - 2, 2, f'{pos + 1} / {len(choices)}', self.color(3))
             self.s.refresh()
             key = self.key()
             if key in ('\x1b', 'q', 'Q'):
@@ -384,7 +407,7 @@ class UI:
             ready = self.frame('', self.t('input'))
             if ready:
                 h, w = self.s.getmaxyx()
-                input_row = h - 4
+                input_row = h - 3 - self.fh
                 for row, line in enumerate(textwrap.wrap(title, max(1, w - 6))[:input_row - 2], 2):
                     self.put(row, 3, line, curses.A_BOLD)
                 # Keep cursor visible even for a long pasted address/value.
@@ -439,7 +462,7 @@ class UI:
                 row = 2
                 for text, attr in lines:
                     for part in textwrap.wrap(text, max(1, w - 6), subsequent_indent='    ') or ['']:
-                        if row < h - 3:
+                        if row < h - 2 - self.fh:
                             self.put(row, 3, part, attr)
                         row += 1
             self.s.refresh()
@@ -453,9 +476,9 @@ class UI:
         lines = str(text).splitlines() or [self.t('empty')]
         pos, horizontal = 0, 0
         while True:
-            ready = self.frame(title, self.t('back').replace('↑↓', 'Up/Down') if self.ascii else self.t('back'))
+            ready = self.frame(title, self.t('back'))
             h, _ = self.s.getmaxyx()
-            rows = max(1, h - 6)
+            rows = max(1, h - 5 - self.fh)
             pos = min(pos, max(0, len(lines) - rows))
             if ready:
                 for i, line in enumerate(lines[pos:pos + rows]):
@@ -629,12 +652,12 @@ class UI:
                 view.sort(key=self.ban_sorter(SORTS[sort_index]))
                 pos = max(0, min(pos, len(view) - 1))
                 own = bans.own_ips()
-                ready = self.frame(self.t('unban'), self.t('bans_nav') if self.s.getmaxyx()[1] >= 92 else self.t('bans_nav_short'))
+                ready = self.frame(self.t('unban'), self.t('bans_nav'))
                 h, w = self.s.getmaxyx()
                 if ready:
                     if note:
                         self.put(2, 4 + cell_width(self.t('unban')), note[0], self.color(note[1]))
-                    avail = max(1, h - 7)
+                    avail = max(1, h - 6 - self.fh)
                     start = max(0, pos - avail + 1)
                     shown = view[start:start + avail]
                     ipw = max([11] + [len(b['ip']) for b in shown])
@@ -672,7 +695,7 @@ class UI:
                         status.append(self.t('no_geo'))
                     if errors:
                         status.append(errors[0][:60])
-                    self.put(h - 3, 2, ' · '.join(status), self.color(4) if errors else self.color(3))
+                    self.put(h - self.fh - 2, 2, ' · '.join(status), self.color(4) if errors else self.color(3))
                 self.s.refresh()
                 key = self.key()
                 if key is None:
@@ -690,9 +713,9 @@ class UI:
                 elif key in (curses.KEY_UP, 'k'):
                     pos = (pos - 1) % len(view) if view else 0
                 elif key == curses.KEY_NPAGE:
-                    pos = min(len(view) - 1, pos + max(1, h - 7))
+                    pos = min(len(view) - 1, pos + max(1, h - 6 - self.fh))
                 elif key == curses.KEY_PPAGE:
-                    pos = max(0, pos - max(1, h - 7))
+                    pos = max(0, pos - max(1, h - 6 - self.fh))
                 elif key == curses.KEY_HOME:
                     pos = 0
                 elif key == curses.KEY_END:
@@ -837,10 +860,12 @@ class UI:
 
     def geo_menu(self):
         keys = ['geo_status', 'geo_update', 'geo_lookup', 'geo_clear']
+        chosen = 0
         while True:
-            idx = self.menu(self.t('geo'), [self.t(k) for k in keys])
+            idx = self.menu(self.t('geo'), [self.t(k) for k in keys], start=chosen)
             if idx is None:
                 return
+            chosen = idx
             self.guarded(self.geo_action, keys[idx])
 
     def geo_action(self, key):
@@ -908,7 +933,7 @@ class UI:
                 while True:
                     ready = self.frame(self.t('follow'), self.t('follow_nav'))
                     h, w = self.s.getmaxyx()
-                    rows = max(1, h - 6)
+                    rows = max(1, h - 5 - self.fh)
                     pos = max(0, len(lines) - rows) if following else min(pos, max(0, len(lines) - rows))
                     if ready:
                         label = self.t('live') if following else self.t('paused')
@@ -950,6 +975,40 @@ class UI:
 
     # ------------------------------------------------------------ actions
 
+    def format_setting(self, key, raw):
+        """bantime in seconds and hours, findtime in seconds, maxretry as a count."""
+        try:
+            value = int(raw)
+        except ValueError:
+            return raw
+        if key == 'bantime':
+            if value < 0:
+                return self.t('forever')
+            hours = f'{value / 3600:.2f}'.rstrip('0').rstrip('.')
+            return f'{value} {self.t("sec_short")} = {hours} {self.t("hours")}'
+        if key == 'findtime':
+            return f'{value} {self.t("sec_short")}'
+        return f'{value} {self.t("tries")}'
+
+    def edit_settings(self, jail):
+        keys = ['bantime', 'findtime', 'maxretry']
+        chosen = 0
+        while True:
+            self.working()
+            labels = [f'{k:<9} {self.t("now")}: {self.format_setting(k, core.get_setting(jail, k))}' for k in keys]
+            idx = self.menu(f'{jail} · {self.t("edit")}', labels, start=chosen)
+            if idx is None:
+                return
+            chosen = idx
+            key = keys[idx]
+            hint = self.t('bantime_hint') if key == 'bantime' else self.t('count' if key == 'maxretry' else 'seconds')
+            value = self.prompt(f'{jail} / {key} ({self.t("now")}: {labels[idx].split(": ", 1)[1]}): {self.t("number")} — {hint}')
+            if value is None or not self.confirm(self.t('apply')):
+                continue
+            self.working()
+            ident = core.write_setting(jail, key, value)
+            self.page(self.t('ok'), f'{key}: {self.format_setting(key, core.get_setting(jail, key))}\n{self.t("saved")}: {ident}')
+
     def choose_jail(self):
         self.working()
         output = core.checked('fail2ban-client', 'status')
@@ -980,16 +1039,7 @@ class UI:
                     self.working()
                     self.page(self.t('ok'), bans.ban(jail, ip))
             else:
-                keys = ['bantime', 'findtime', 'maxretry']
-                idx = self.menu(self.t('setting'), [k + ' / ' + self.t('count' if k == 'maxretry' else 'seconds') for k in keys])
-                if idx is None:
-                    return
-                value = self.prompt(jail + ' / ' + keys[idx] + ': ' + self.t('number'))
-                if value is None or not self.confirm(self.t('apply')):
-                    return
-                self.working()
-                ident = core.write_setting(jail, keys[idx], value)
-                self.page(self.t('ok'), self.t('saved') + ': ' + ident)
+                self.edit_settings(jail)
         elif action == 'overview':
             self.working()
             service = core.run('systemctl', 'is-active', 'fail2ban')[1]
@@ -1035,11 +1085,13 @@ class UI:
             self.toggle('l')
 
     def app(self):
+        chosen = 0  # The cursor stays on the item we came back from.
         while True:
             self.working()
-            idx = self.menu('menu', ACTIONS, translate=True, icons=True, header=self.dashboard())
+            idx = self.menu('menu', ACTIONS, translate=True, icons=True, header=self.dashboard(), start=chosen, footer=self.t('nav_main'))
             if idx is None or ACTIONS[idx] == 'exit':
                 return
+            chosen = idx
             try:
                 self.execute(ACTIONS[idx])
             except Cancelled as exc:
